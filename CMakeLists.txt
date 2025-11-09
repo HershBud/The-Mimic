@@ -45,6 +45,16 @@ set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded CACHE STRING "" FORCE)
 # For simplicity, the name of the CMake project is also the name of the target
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 
+
+
+
+# Define the path to our downloaded ONNX Runtime library
+# Adjust the version number to match the folder you downloaded
+set(ONNXRUNTIME_ROOTDIR "${CMAKE_SOURCE_DIR}/vendor/onnxruntime-win-x64-1.18.0")
+
+
+
+
 # JUCE is setup as a submodule in the /JUCE folder
 # Locally, you must run `git submodule update --init --recursive` once
 # and later `git submodule update --remote --merge` to keep it up to date
@@ -88,6 +98,34 @@ juce_add_plugin("${PROJECT_NAME}"
     # This can be different from PROJECT_NAME and can have spaces!
     # You might want to use v${MAJOR_VERSION} here once you go to v2...
     PRODUCT_NAME "${PRODUCT_NAME}")
+
+
+
+
+# --- This is where we link ONNX to our plugin ---
+
+# 1. Add the ONNX 'include' directory to our plugin's search path
+target_include_directories(${PROJECT_NAME}
+    PRIVATE "${ONNXRUNTIME_ROOTDIR}/include"
+)
+
+# 2. Link the ONNX .lib file to our plugin
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE "${ONNXRUNTIME_ROOTDIR}/lib/onnxruntime.lib"
+)
+
+# 3. IMPORTANT: Copy the .dll file to the build output
+# This copies the ONNX "engine" right next to your .vst3 file
+# so the DAW can find it.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${ONNXRUNTIME_ROOTDIR}/lib/onnxruntime.dll"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+)
+
+
+
+
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
